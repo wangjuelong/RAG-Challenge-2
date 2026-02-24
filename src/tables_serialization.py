@@ -1,19 +1,18 @@
-import os
-import json
 import asyncio
-from pathlib import Path
-from dotenv import load_dotenv
-from typing import Optional, List, Union, Literal
-from pydantic import BaseModel, Field
-from openai import OpenAI
-from src.api_requests import BaseOpenaiProcessor, AsyncOpenaiProcessor
-import tiktoken
-from tqdm import tqdm
+import json
 import logging
+import os
 import threading
-from concurrent.futures import ThreadPoolExecutor
-from queue import Queue
 import time
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+from queue import Queue
+from typing import List
+
+from pydantic import BaseModel, Field
+from tqdm import tqdm
+
+from src.api_requests import BaseOpenaiProcessor, AsyncOpenaiProcessor
 
 message_queue = Queue()
 
@@ -48,9 +47,15 @@ class TableSerializer(BaseOpenaiProcessor):
         self.logger.propagate = False
 
     def _get_table_context(self, json_report, target_table_index):
+        """
+        获取表的相邻文本，即上下文
+        """
+
+        # 获取指定索引的表格信息
         table_info = next(table for table in json_report["tables"] if table["table_id"] == target_table_index)
+        # 表格对应的页码
         page_num = table_info["page"]
-        
+        # 获取对应页的内容
         page_content = next(
             (page["content"] for page in json_report["content"] if page["page"] == page_num),
             []
@@ -60,21 +65,21 @@ class TableSerializer(BaseOpenaiProcessor):
             self.logger.warning(f"Page {page_num} not found for table {target_table_index}")
             return "", ""
 
-        # Find position of target table in page_content
+        # 查找目标表格在页面内容中的位置
         current_table_position = -1
         for i, block in enumerate(page_content):
             if block["type"] == "table" and block.get("table_id") == target_table_index:
                 current_table_position = i
                 break
 
-        # Find position of previous table if exists
+        # 查找上一张表的位置（如果存在）
         previous_table_position = -1
         for i in range(current_table_position-1, -1, -1):
             if page_content[i]["type"] == "table":
                 previous_table_position = i
                 break
 
-        # Find position of next table if exists
+        # 查找下一张表的位置（如果存在）
         next_table_position = -1
         for i in range(current_table_position + 1, len(page_content)):
             if page_content[i]["type"] == "table":
@@ -174,7 +179,7 @@ class TableSerializer(BaseOpenaiProcessor):
         requests_filepath: str = './temp_async_llm_requests.jsonl',
         results_filepath: str = './temp_async_llm_results.jsonl'
     ) -> dict:
-        """Process all tables in the report asynchronously"""
+        """异步处理报告中的所有表格"""
         queries = []
         table_indices = []
         
@@ -186,7 +191,7 @@ class TableSerializer(BaseOpenaiProcessor):
             table_info = next(table for table in json_report["tables"] if table["table_id"] == table_index)
             table_content = table_info["html"]
             
-            # Construct the query
+            # 使用表的上下文构建提示词
             query = ""
             if context_before:
                 query += f'Here is additional text before the table that might be relevant (or not):\n"""{context_before}"""\n\n'
@@ -226,10 +231,13 @@ class TableSerializer(BaseOpenaiProcessor):
         return json_report
 
     def process_file(self, json_path: Path) -> None:
+        """
+        处理JSON文件
+        """
         try:
             with open(json_path, 'r', encoding='utf-8') as f:
                 json_report = json.load(f)
-            
+            # 当前线程id，确保临时文件的唯一性
             thread_id = threading.get_ident()
             requests_filepath = f'./temp/async_llm_requests_{thread_id}.jsonl'
             results_filepath = f'./temp/async_llm_results_{thread_id}.jsonl'
@@ -261,14 +269,16 @@ class TableSerializer(BaseOpenaiProcessor):
             raise
 
     def process_directory_parallel(self, input_dir: Path, max_workers: int = 5):
-        """Process JSON files in parallel using thread pool.
+        """
+        多线程处理指定目录下的JSON文件列表
         
         Args:
-            input_dir: Path to directory containing JSON files
-            max_workers: Maximum number of threads to use
+            input_dir: 包含JSON文件的目录
+            max_workers: 可用最大线程数量
         """
         self.logger.info("Starting parallel table serialization...")
-        
+
+        # 获取指定目录下的JSON文件列表
         json_files = list(input_dir.glob("*.json"))
         
         if not json_files:
@@ -285,6 +295,7 @@ class TableSerializer(BaseOpenaiProcessor):
             ) as pbar:
                 futures = []
                 for json_file in json_files:
+                    # 处理JSON文件
                     future = executor.submit(self.process_file, json_file)
                     future.add_done_callback(lambda p: pbar.update(1))
                     futures.append(future)
@@ -297,6 +308,7 @@ class TableSerializer(BaseOpenaiProcessor):
                         if future.done():
                             done_futures.append(future)
                             try:
+                                # 尝试获取结果
                                 future.result()
                             except Exception as e:
                                 self.logger.error(str(e))
@@ -316,6 +328,11 @@ class TableSerialization:
         "You are a table serialization agent.\n"
         "Your task is to create a set of contextually independent blocks of information based on the provided table and surrounding text.\n"
         "These blocks must be totally context-independent because they will be used as separate chunk to populate database."
+    )
+    system_prompt_cn = (
+        "你是一个表序列化代理.\n"
+        "你的任务是提供的表格和周围的文本，创建一组上下文无关的信息块。\b"
+        "这些信息块必须完全独立于上下文，因为它们将作为单独的数据块来填充数据库。"
     )
 
     class SerializedInformationBlock(BaseModel):

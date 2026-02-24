@@ -9,7 +9,10 @@ def cli():
 
 @cli.command()
 def download_models():
-    """Download required docling models."""
+    """
+    下载必需的docling模型
+    原理：调用docling去处理名为dummy_report.pdf的文件，以此触发docling相关的模型自动下载
+    """
     click.echo("Downloading docling models...")
     Pipeline.download_docling_models()
 
@@ -28,7 +31,7 @@ def parse_pdfs(parallel, chunk_size, max_workers):
 @cli.command()
 @click.option('--max-workers', default=10, help='Number of workers for table serialization')
 def serialize_tables(max_workers):
-    """Serialize tables in parsed reports using parallel threading."""
+    """使用多线程对已解析报表中的表格进行序列化"""
     root_path = Path.cwd()
     pipeline = Pipeline(root_path)
     
