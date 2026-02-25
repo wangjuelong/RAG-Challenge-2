@@ -96,12 +96,12 @@ class LLMReranker:
         
         if documents_batch_size == 1:
             def process_single_doc(doc):
-                # Get ranking for single document
+                # 获取单个文档的得分
                 ranking = self.get_rank_for_single_block(query, doc['text'])
                 
                 doc_with_score = doc.copy()
                 doc_with_score["relevance_score"] = ranking["relevance_score"]
-                # Calculate combined score - note that distance is inverted since lower is better
+                # 计算综合得分：注意距离的计算方式是反向的，因为距离越小越好
                 doc_with_score["combined_score"] = round(
                     llm_weight * ranking["relevance_score"] + 
                     vector_weight * doc['distance'],
@@ -115,12 +115,16 @@ class LLMReranker:
                 
         else:
             def process_batch(batch):
+                """
+                批量获取文档得分
+                """
                 texts = [doc['text'] for doc in batch]
                 rankings = self.get_rank_for_multiple_blocks(query, texts)
                 results = []
                 block_rankings = rankings.get('block_rankings', [])
                 
                 if len(block_rankings) < len(batch):
+                    # 输出没有得分的文本
                     print(f"\nWarning: Expected {len(batch)} rankings but got {len(block_rankings)}")
                     for i in range(len(block_rankings), len(batch)):
                         doc = batch[i]

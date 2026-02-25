@@ -5,8 +5,7 @@ import json
 
 class PageTextPreparation:
     """
-    Cleans and formats page blocks according to rules, handling consecutive 
-    groups for tables, lists, and footnotes.
+    根据规则清理和格式化页面块，处理连续的表格、列表和脚注组。
     """
 
     def __init__(self, use_serialized_tables: bool = False, serialized_tables_instead_of_markdown: bool = False):

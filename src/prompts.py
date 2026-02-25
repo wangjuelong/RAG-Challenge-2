@@ -5,6 +5,12 @@ import re
 
 
 def build_system_prompt(instruction: str="", example: str="", pydantic_schema: str="") -> str:
+    """
+    构建系统提示词
+    :param instruction: 操作指令
+    :param example: 问答示例
+    :param pydantic_schema: 响应格式
+    """
     delimiter = "\n\n---\n\n"
     schema = f"Your answer should be in JSON and strictly follow this schema, filling in the fields in the order they are given:\n```\n{pydantic_schema}\n```"
     if example:
@@ -16,12 +22,26 @@ def build_system_prompt(instruction: str="", example: str="", pydantic_schema: s
     return system_prompt
 
 class RephrasedQuestionsPrompt:
+    """
+    问题改写提示词
+    """
     instruction = """
 You are a question rephrasing system.
 Your task is to break down a comparative question into individual questions for each company mentioned.
 Each output question must be self-contained, maintain the same intent and metric as the original question, be specific to the respective company, and use consistent phrasing.
 """
 
+    instruction_cn = """
+你是一个问题重述系统。
+
+你的任务是将一个比较性问题拆分成针对每家提及公司的独立问题。
+
+每个输出问题都必须独立完整，与原问题保持相同的意图和衡量标准，针对特定公司，并使用一致的措辞。
+"""
+
+    """
+    响应格式对应的类对象
+    """
     class RephrasedQuestion(BaseModel):
         """Individual question for a company"""
         company_name: str = Field(description="Company name, exactly as provided in quotes in the original question")
@@ -31,6 +51,9 @@ Each output question must be self-contained, maintain the same intent and metric
         """List of rephrased questions"""
         questions: List['RephrasedQuestionsPrompt.RephrasedQuestion'] = Field(description="List of rephrased questions for each company")
 
+    """
+    响应格式对应的类描述
+    """
     pydantic_schema = '''
 class RephrasedQuestion(BaseModel):
     """Individual question for a company"""
@@ -42,6 +65,9 @@ class RephrasedQuestions(BaseModel):
     questions: List['RephrasedQuestionsPrompt.RephrasedQuestion'] = Field(description="List of rephrased questions for each company")
 '''
 
+    """
+    问答示例
+    """
     example = r"""
 Example:
 Input:
@@ -69,7 +95,9 @@ Output:
 
     system_prompt_with_schema = build_system_prompt(instruction, example, pydantic_schema)
 
-
+"""
+使用RAG上下文共享提示词
+"""
 class AnswerWithRAGContextSharedPrompt:
     instruction = """
 You are a RAG (Retrieval-Augmented Generation) answering system.
@@ -97,10 +125,20 @@ class AnswerWithRAGContextNamePrompt:
     user_prompt = AnswerWithRAGContextSharedPrompt.user_prompt
 
     class AnswerSchema(BaseModel):
+        # 对答案进行详细的步骤分析，至少包含 5 个步骤，字数不少于 150 字。
+        # 务必仔细阅读题目的措辞，以免被误导。有时，答案看似就在上下文中，但这可能并非题目要求的答案，而只是一个类似的答案。
         step_by_step_analysis: str = Field(description="Detailed step-by-step analysis of the answer with at least 5 steps and at least 150 words. Pay special attention to the wording of the question to avoid being tricked. Sometimes it seems that there is an answer in the context, but this is might be not the requested value, but only a similar one.")
-
+        # 简明扼要地总结逐步推理过程，约50字。
         reasoning_summary: str = Field(description="Concise summary of the step-by-step reasoning process. Around 50 words.")
-
+        # 相关页面->列出包含直接用于回答问题的信息的页码。仅包含：
+        #
+        # - 包含直接答案或明确陈述的页码
+        #
+        # - 包含有力支持答案的关键信息的页码
+        #
+        # 请勿包含仅与答案略有关联或联系薄弱的页码。
+        #
+        # 列表中至少应包含一页。
         relevant_pages: List[int] = Field(description="""
 List of page numbers containing information directly used to answer the question. Include only:
 - Pages with direct answers or explicit statements
@@ -108,7 +146,15 @@ List of page numbers containing information directly used to answer the question
 Do not include pages with only tangentially related information or weak connections to the answer.
 At least one page should be included in the list.
 """)
-
+        # 最终答案->如果是公司名称，应按原文提取。
+        #
+        # 如果是人名，应提取其全名。
+        #
+        # 如果是产品名称，应按原文提取。
+        #
+        # 不包含任何额外信息、词语或注释。
+        #
+        # - 如果上下文中没有相关信息，则返回“N/A”。
         final_answer: Union[str, Literal["N/A"]] = Field(description="""
 If it is a company name, should be extracted exactly as it appears in question.
 If it is a person name, it should be their full name.
@@ -138,8 +184,6 @@ Answer:
     system_prompt = build_system_prompt(instruction, example)
 
     system_prompt_with_schema = build_system_prompt(instruction, example, pydantic_schema)
-
-
 
 class AnswerWithRAGContextNumberPrompt:
     instruction = AnswerWithRAGContextSharedPrompt.instruction
@@ -236,8 +280,6 @@ Answer:
 
     system_prompt_with_schema = build_system_prompt(instruction, example, pydantic_schema)
 
-
-
 class AnswerWithRAGContextBooleanPrompt:
     instruction = AnswerWithRAGContextSharedPrompt.instruction
     user_prompt = AnswerWithRAGContextSharedPrompt.user_prompt
@@ -280,8 +322,6 @@ Answer:
     system_prompt = build_system_prompt(instruction, example)
 
     system_prompt_with_schema = build_system_prompt(instruction, example, pydantic_schema)
-
-
 
 class AnswerWithRAGContextNamesPrompt:
     instruction = AnswerWithRAGContextSharedPrompt.instruction
@@ -427,7 +467,9 @@ Here is the LLM response that not following the schema and needs to be properly 
 
 
 
-
+"""
+重排序提示词
+"""
 class RerankingPrompt:
     system_prompt_rerank_single_block = """
 You are a RAG (Retrieval-Augmented Generation) retrievals ranker.
@@ -457,6 +499,35 @@ Instructions:
    - Clarity: Be clear and concise in your justifications.
    - No assumptions: Do not infer information beyond what's explicitly stated in the block.
 """
+
+    system_prompt_rerank_single_block_cn = """
+您是一名 RAG（检索增强生成）检索排序员。
+
+您将收到一个查询以及与该查询相关的检索文本块。您的任务是根据文本块与所提供查询的相关性对其进行评估和评分。
+
+说明：
+
+1. 推理：
+    分析文本块，识别关键信息及其与查询的关系。考虑文本块是否提供了直接答案、部分见解或与查询相关的背景信息。用几句话解释您的推理，并引用文本块中的具体元素来支持您的评估。避免假设——只关注文本块提供的内容。
+
+2. 相关性评分（0 到 1，以 0.1 为增量）：
+    0 = 完全不相关：文本块与查询没有任何联系或关系。
+    0.1 = 几乎不相关：文本块与查询只有非常轻微或模糊的联系。
+    0.2 = 极微弱相关：仅与查询内容存在极小或间接的联系。
+    0.3 = 微弱相关：涉及查询内容的一小部分，但缺乏实质性细节。
+    0.4 = 略微相关：包含部分相关信息，与查询内容有一定关联，但不够全面。
+    0.5 = 中等相关：与查询内容相关，但相关性有限或不完全。
+    0.6 = 比较相关：提供相关信息，但缺乏深度或具体性。
+    0.7 = 相关：与查询内容密切相关，提供实质性信息，但不够全面。
+    0.8 = 非常相关：与查询内容密切相关，并提供重要信息。
+    0.9 = 高度相关：几乎完全回答查询内容，提供详细且具体的信息。
+    1 = 完全相关：直接且全面地回答查询内容，提供所有必要的具体信息。
+
+3. 补充说明：
+    - 客观性：仅根据代码块内容与查询的相关性进行评估。
+    - 清晰度：论证要清晰简洁。
+    - 避免假设：不要推断代码块中未明确说明的信息。
+    """
 
     system_prompt_rerank_multiple_blocks = """
 You are a RAG (Retrieval-Augmented Generation) retrievals ranker.

@@ -31,7 +31,7 @@ class TextSplitter():
         return tables_by_page
 
     def _split_report(self, file_content: Dict[str, any], serialized_tables_report_path: Optional[Path] = None) -> Dict[str, any]:
-        """Split report into chunks, preserving markdown tables in content and optionally including serialized tables."""
+        """将报告拆分为多个块，保留内容中markdown表格，并可以选择包含序列化表格"""
         chunks = []
         chunk_id = 0
         
@@ -42,6 +42,11 @@ class TextSplitter():
             tables_by_page = self._get_serialized_tables_by_page(parsed_report.get('tables', []))
         
         for page in file_content['content']['pages']:
+            """
+            按照页进行迭代，提取页面中的数据块
+            1. 提取单页中文本内容
+            2. 提取相应页中序列化的表格
+            """
             page_chunks = self._split_page(page)
             for chunk in page_chunks:
                 chunk['id'] = chunk_id
@@ -59,7 +64,11 @@ class TextSplitter():
         file_content['content']['chunks'] = chunks
         return file_content
 
-    def count_tokens(self, string: str, encoding_name="o200k_base"):
+    @staticmethod
+    def count_tokens(string: str, encoding_name="o200k_base"):
+        """
+        通过tiktoken计算token的数量
+        """
         encoding = tiktoken.get_encoding(encoding_name)
 
         tokens = encoding.encode(string)
@@ -68,7 +77,10 @@ class TextSplitter():
         return token_count
 
     def _split_page(self, page: Dict[str, any], chunk_size: int = 300, chunk_overlap: int = 50) -> List[Dict[str, any]]:
-        """Split page text into chunks. The original text includes markdown tables."""
+        """
+        将页面文本拆分为多个部分，原文包含Markdown表格
+        此处借助模型进行深度文本分割
+        """
         text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
             model_name="gpt-4o",
             chunk_size=chunk_size,

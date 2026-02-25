@@ -156,7 +156,7 @@ class Pipeline:
         )
 
     def merge_reports(self):
-        """Merge complex JSON reports into a simpler structure with a list of pages, where all text blocks are combined into a single string."""
+        """将复杂的 JSON 报告合并成一个更简单的结构，其中包含页面列表，所有文本块都合并成一个字符串。"""
         ptp = PageTextPreparation(use_serialized_tables=self.run_config.use_serialized_tables)
         _ = ptp.process_reports(
             reports_dir=self.paths.parsed_reports_path,
@@ -213,11 +213,11 @@ class Pipeline:
             self.parse_pdf_reports_sequential()
 
     def process_parsed_reports(self):
-        """Process already parsed PDF reports through the pipeline:
-        1. Merge to simpler JSON structure
-        2. Export to markdown
-        3. Chunk the reports
-        4. Create vector databases
+        """通过pipeline处理已经解析的报告:
+        1. 合并为更简单的JSON结构
+        2. 导出为markdown
+        3. 报告分块
+        4. 构建向量数据库
         """
         print("Starting reports processing pipeline...")
 
@@ -237,8 +237,8 @@ class Pipeline:
 
     def _get_next_available_filename(self, base_path: Path) -> Path:
         """
-        Returns the next available filename by adding a numbered suffix if the file exists.
-        Example: If answers.json exists, returns answers_01.json, etc.
+        如果文件存在，则返回下一个可用的文件名，并在文件名后添加一个数字后缀
+        示例: 如果answers.json存在, 则返回answers_01.json
         """
         if not base_path.exists():
             return base_path
@@ -257,6 +257,7 @@ class Pipeline:
             counter += 1
 
     def process_questions(self):
+        # 问题处理器
         processor = QuestionsProcessor(
             vector_db_dir=self.paths.vector_db_dir,
             documents_dir=self.paths.documents_dir,
@@ -273,10 +274,11 @@ class Pipeline:
             full_context=self.run_config.full_context
         )
 
+        # 确定回答的输出文件
         output_path = self._get_next_available_filename(self.paths.answers_file_path)
 
         _ = processor.process_all_questions(
-            output_path=output_path,
+            output_path=str(output_path),
             submission_file=self.run_config.submission_file,
             team_email=self.run_config.team_email,
             submission_name=self.run_config.submission_name,

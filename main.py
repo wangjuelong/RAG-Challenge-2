@@ -52,7 +52,7 @@ def process_reports(config):
 @cli.command()
 @click.option('--config', type=click.Choice(['base', 'pdr', 'max', 'max_no_ser_tab', 'max_nst_o3m', 'max_st_o3m', 'ibm_llama70b', 'ibm_llama8b', 'gemini_thinking']), default='base', help='Configuration preset to use')
 def process_questions(config):
-    """Process questions using the pipeline."""
+    """使用pipeline处理问题"""
     root_path = Path.cwd()
     run_config = configs[config]
     pipeline = Pipeline(root_path, run_config=run_config)

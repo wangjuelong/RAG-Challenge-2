@@ -420,7 +420,7 @@ class APIProcessor:
 
 
     def _build_rag_context_prompts(self, schema):
-        """Return prompts tuple for the given schema."""
+        """基于schema返回对应的提示词"""
         use_schema_prompt = True if self.provider == "ibm" or self.provider == "gemini" else False
         
         if schema == "name":

@@ -209,6 +209,7 @@ class VectorRetriever:
 
     def retrieve_all(self, company_name: str) -> List[Dict]:
         target_report = None
+        # 查看数据库中是否存在指定公司的报告
         for report in self.all_dbs:
             document = report.get("document", {})
             metainfo = document.get("metainfo")
@@ -224,7 +225,7 @@ class VectorRetriever:
         
         document = target_report["document"]
         pages = document["content"]["pages"]
-        
+        # 获取所有的页内容
         all_pages = []
         for page in sorted(pages, key=lambda p: p["page"]):
             result = {
@@ -253,16 +254,16 @@ class HybridRetriever:
         return_parent_pages: bool = False
     ) -> List[Dict]:
         """
-        Retrieve and rerank documents using hybrid approach.
+        使用混合方法检索和重排序文档
         
         Args:
-            company_name: Name of the company to search documents for
-            query: Search query
-            llm_reranking_sample_size: Number of initial results to retrieve from vector DB
-            documents_batch_size: Number of documents to analyze in one LLM prompt
-            top_n: Number of final results to return after reranking
-            llm_weight: Weight given to LLM scores (0-1)
-            return_parent_pages: Whether to return full pages instead of chunks
+            company_name: 要查找文档的公司名称
+            query: 查询语句
+            llm_reranking_sample_size: 要从向量数据库中检索的初始结果的数量
+            documents_batch_size: 在LLM提示词中需要分析的文档数量（即上下文包含文档的数量）
+            top_n: 重排序后返回的最终结果的文档数量
+            llm_weight: LLM分数的权重(0-1)
+            return_parent_pages:是否返回完整页面，而不是页面分块
             
         Returns:
             List of reranked document dictionaries with scores

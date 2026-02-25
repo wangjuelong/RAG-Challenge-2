@@ -34,6 +34,7 @@ class QuestionsProcessor:
         
         self.new_challenge_pipeline = new_challenge_pipeline
         self.return_parent_pages = parent_document_retrieval
+        # 通过LLM进行重排序
         self.llm_reranking = llm_reranking
         self.llm_reranking_sample_size = llm_reranking_sample_size
         self.top_n_retrieval = top_n_retrieval
@@ -54,7 +55,7 @@ class QuestionsProcessor:
             return json.load(file)
 
     def _format_retrieval_results(self, retrieval_results) -> str:
-        """Format vector retrieval results into RAG context string"""
+        """将向量检索结果格式化为RAG上下文字符串"""
         if not retrieval_results:
             return ""
         
@@ -132,8 +133,10 @@ class QuestionsProcessor:
             )
 
         if self.full_context:
+            # 完整上下文模式:查询指定公司的所有信息
             retrieval_results = retriever.retrieve_all(company_name)
-        else:           
+        else:
+            # 根据问题、公司名查询TopK相关数据，并进行llm重排序
             retrieval_results = retriever.retrieve_by_company_name(
                 company_name=company_name,
                 query=question,
@@ -161,7 +164,7 @@ class QuestionsProcessor:
         return answer_dict
 
     def _extract_companies_from_subset(self, question_text: str) -> list[str]:
-        """Extract company names from a question by matching against companies in the subset file."""
+        """通过与子集文件中的公司进行匹配，从问题中提取公司名称。"""
         if not hasattr(self, 'companies_df'):
             if self.subset_path is None:
                 raise ValueError("subset_path must be provided to use subset extraction")
@@ -182,6 +185,10 @@ class QuestionsProcessor:
         return found_companies
 
     def process_question(self, question: str, schema: str):
+        """
+        处理问题
+        1. 根据问题，从文件中提取出对应的公司名称列表
+        """
         if self.new_challenge_pipeline:
             extracted_companies = self._extract_companies_from_subset(question)
         else:
@@ -191,10 +198,12 @@ class QuestionsProcessor:
             raise ValueError("No company name found in the question.")
         
         if len(extracted_companies) == 1:
+            # 单一公司-问题处理
             company_name = extracted_companies[0]
             answer_dict = self.get_answer_for_company(company_name=company_name, question=question, schema=schema)
             return answer_dict
         else:
+            # 多公司-问题处理
             return self.process_comparative_question(question, extracted_companies, schema)
     
     def _create_answer_detail_ref(self, answer_dict: dict, question_index: int) -> str:
@@ -231,14 +240,19 @@ class QuestionsProcessor:
         }
 
     def process_questions_list(self, questions_list: List[dict], output_path: str = None, submission_file: bool = False, team_email: str = "", submission_name: str = "", pipeline_details: str = "") -> dict:
+        """
+        处理问题清单
+        """
         total_questions = len(questions_list)
-        # Add index to each question so we know where to write the answer details
+        # 为每个问题添加索引，以便我们知道在哪里编写答案详情。
         questions_with_index = [{**q, "_question_index": i} for i, q in enumerate(questions_list)]
-        self.answer_details = [None] * total_questions  # Preallocate list for answer details
+        # 答案详情预分配列表
+        self.answer_details = [None] * total_questions
         processed_questions = []
         parallel_threads = self.parallel_requests
 
         if parallel_threads <= 1:
+            # 单线程
             for question_data in tqdm(questions_with_index, desc="Processing questions"):
                 processed_question = self._process_single_question(question_data)
                 processed_questions.append(processed_question)
@@ -266,8 +280,14 @@ class QuestionsProcessor:
         }
 
     def _process_single_question(self, question_data: dict) -> dict:
+        """
+        处理单个问题
+        """
+
+        # 问题索引
         question_index = question_data.get("_question_index", 0)
-        
+
+        # 提取问题内容和对应的答案类型
         if self.new_challenge_pipeline:
             question_text = question_data.get("text")
             schema = question_data.get("kind")
