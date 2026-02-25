@@ -1,20 +1,20 @@
-import os
-import json
-from dotenv import load_dotenv
-from typing import Union, List, Dict, Type, Optional, Literal
-from openai import OpenAI
 import asyncio
-from src.api_request_parallel_processor import process_api_requests_from_file
-from openai.lib._parsing import type_to_response_format_param 
-import tiktoken
-import src.prompts as prompts
-import requests
-from json_repair import repair_json
-from pydantic import BaseModel
+import json
+import os
+from typing import Union, List, Dict, Type, Optional, Literal
+
 import google.generativeai as genai
-from copy import deepcopy
+import requests
+import tiktoken
+from dotenv import load_dotenv
+from json_repair import repair_json
+from openai import OpenAI
+from openai.lib._parsing import type_to_response_format_param
+from pydantic import BaseModel
 from tenacity import retry, stop_after_attempt, wait_fixed
 
+import src.prompts as prompts
+from src.api_request_parallel_processor import process_api_requests_from_file
 
 
 class BaseOpenaiProcessor:

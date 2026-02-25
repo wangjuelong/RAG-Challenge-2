@@ -24,7 +24,7 @@ def parse_pdfs(parallel, chunk_size, max_workers):
     """Parse PDF reports with optional parallel processing."""
     root_path = Path.cwd()
     pipeline = Pipeline(root_path)
-    
+
     click.echo(f"Parsing PDFs (parallel={parallel}, chunk_size={chunk_size}, max_workers={max_workers})")
     pipeline.parse_pdf_reports(parallel=parallel, chunk_size=chunk_size, max_workers=max_workers)
 
@@ -34,7 +34,7 @@ def serialize_tables(max_workers):
     """使用多线程对已解析报表中的表格进行序列化"""
     root_path = Path.cwd()
     pipeline = Pipeline(root_path)
-    
+
     click.echo(f"Serializing tables (max_workers={max_workers})...")
     pipeline.serialize_tables(max_workers=max_workers)
 
@@ -45,7 +45,7 @@ def process_reports(config):
     root_path = Path.cwd()
     run_config = preprocess_configs[config]
     pipeline = Pipeline(root_path, run_config=run_config)
-    
+
     click.echo(f"Processing parsed reports (config={config})...")
     pipeline.process_parsed_reports()
 
@@ -56,7 +56,7 @@ def process_questions(config):
     root_path = Path.cwd()
     run_config = configs[config]
     pipeline = Pipeline(root_path, run_config=run_config)
-    
+
     click.echo(f"Processing questions (config={config})...")
     pipeline.process_questions()
 

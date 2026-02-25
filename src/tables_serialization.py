@@ -297,6 +297,7 @@ class TableSerializer(BaseOpenaiProcessor):
                 for json_file in json_files:
                     # 处理JSON文件
                     future = executor.submit(self.process_file, json_file)
+                    # 线程结束时，执行回调函数，更新进度条
                     future.add_done_callback(lambda p: pbar.update(1))
                     futures.append(future)
                 
@@ -305,10 +306,11 @@ class TableSerializer(BaseOpenaiProcessor):
                     
                     done_futures = []
                     for future in futures:
+                        # 通过done判断指定线程是否执行结束
                         if future.done():
                             done_futures.append(future)
                             try:
-                                # 尝试获取结果
+                                # 使用result方法获取线程执行后的结果
                                 future.result()
                             except Exception as e:
                                 self.logger.error(str(e))

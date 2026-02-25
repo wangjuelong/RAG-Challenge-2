@@ -187,6 +187,7 @@ class PDFParser:
             input_doc_paths: List of paths to PDF files to process
             doc_dir: Directory containing PDF files (used if input_doc_paths is None)
             optimal_workers: Number of worker processes to use. If None, uses CPU count.
+            chunk_size: Number of PDFs in a worker
         """
         import multiprocessing
         from concurrent.futures import ProcessPoolExecutor, as_completed

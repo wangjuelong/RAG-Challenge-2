@@ -499,15 +499,18 @@ class QuestionsProcessor:
                 schema="number"
             )
             return company, answer_dict
-
+        # 使用线程池异步批量处理问答
         with concurrent.futures.ThreadPoolExecutor() as executor:
             future_to_company = {
+                # 使用submit提交任务
                 executor.submit(process_company_question, company): company 
                 for company in companies
             }
-            
+
+            # 使用as_completed等待所有线程执行结束
             for future in concurrent.futures.as_completed(future_to_company):
                 try:
+                    # 使用result获取线程执行结果
                     company, answer_dict = future.result()
                     individual_answers[company] = answer_dict
                     

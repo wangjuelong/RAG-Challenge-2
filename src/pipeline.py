@@ -19,13 +19,16 @@ from src.tables_serialization import TableSerializer
 class PipelineConfig:
     def __init__(self, root_path: Path, subset_name: str = "subset.csv", questions_file_name: str = "questions.json",
                  pdf_reports_dir_name: str = "pdf_reports", serialized: bool = False, config_suffix: str = ""):
+        # 根目录
         self.root_path = root_path
         suffix = "_ser_tab" if serialized else ""
-
+        # subset路径
         self.subset_path = root_path / subset_name
+        # 问题文件路径
         self.questions_file_path = root_path / questions_file_name
+        # pdf报告所在目录
         self.pdf_reports_dir = root_path / pdf_reports_dir_name
-
+        # 回答文件路径
         self.answers_file_path = root_path / f"answers{config_suffix}.json"
         self.debug_data_path = root_path / "debug_data"
         self.databases_path = root_path / f"databases{suffix}"
@@ -74,7 +77,7 @@ class Pipeline:
 
     def _initialize_paths(self, root_path: Path, subset_name: str, questions_file_name: str,
                           pdf_reports_dir_name: str) -> PipelineConfig:
-        """Initialize paths configuration based on run config settings"""
+        """根据RunConfig设置初始化路径配置"""
         return PipelineConfig(
             root_path=root_path,
             subset_name=subset_name,
@@ -86,6 +89,7 @@ class Pipeline:
 
     def _convert_json_to_csv_if_needed(self):
         """
+        JSON转CSV
         Checks if subset.json exists in root dir and subset.csv is absent.
         If so, converts the JSON to CSV format.
         """
@@ -112,6 +116,9 @@ class Pipeline:
         parser.parse_and_export(input_doc_paths=[here() / "src/dummy_report.pdf"])
 
     def parse_pdf_reports_sequential(self):
+        """
+        同步解析PDF报告
+        """
         logging.basicConfig(level=logging.DEBUG)
 
         pdf_parser = PDFParser(
@@ -124,11 +131,11 @@ class Pipeline:
         print(f"PDF reports parsed and saved to {self.paths.parsed_reports_path}")
 
     def parse_pdf_reports_parallel(self, chunk_size: int = 2, max_workers: int = 10):
-        """Parse PDF reports in parallel using multiple processes.
-        
+        """
+        多线程异步解析PDF报告
         Args:
-            chunk_size: Number of PDFs to process in each worker
-            num_workers: Number of parallel worker processes to use
+            chunk_size: 每个线程可处理的PDF数量
+            max_workers: 可用最大线程数
         """
         logging.basicConfig(level=logging.DEBUG)
 
